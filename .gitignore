@@ -17,3 +17,5 @@ Thumbs.db
 
 # Logs y otros
 *.log
+mundial_tweets.csv
+mundial_tweets_limpio.csv
