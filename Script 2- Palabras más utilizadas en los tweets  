@@ -1,0 +1,54 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+import re
+from nltk.corpus import stopwords
+
+# Descargar stopwords
+try:
+    stopwords.words('spanish')
+except LookupError:
+    import nltk
+    nltk.download('stopwords')
+stopwords_es = set(stopwords.words('spanish'))
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV y procesa fechas y horas."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Fecha"] = df["Date"].dt.date
+    df["Hora"] = df["Date"].dt.time
+    df = df.drop(columns=["Date"])
+    return df
+
+if __name__ == "__main__":
+    df = cargar_y_limpiar_datos()
+
+    # Análisis de palabras más utilizadas
+    all_words = ' '.join(df['Tweet'].dropna()).lower()
+    all_words = re.findall(r'\b\w+\b', all_words)
+    filtered_words = [w for w in all_words if w not in stopwords_es and len(w) > 3]
+    word_freq = Counter(filtered_words).most_common(20)
+
+    df_words = pd.DataFrame(word_freq, columns=["Palabra", "Frecuencia"])
+    df_words['Porcentaje'] = df_words['Frecuencia'] / df_words['Frecuencia'].sum() * 100
+
+    # Visualización
+    plt.close()
+    df_words.plot(kind="barh", x="Palabra", y="Frecuencia", legend=False, color="skyblue")
+    for i, (freq, pct) in enumerate(zip(df_words['Frecuencia'], df_words['Porcentaje'])):
+        plt.text(freq + 1, i, f'{freq} ({pct:.1f}%)', va='center')
+    plt.title("Palabras más comunes en tweets")
+    plt.xlabel("Frecuencia")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    plt.show()
+
+    # Mostrar resultados en consola
+    print("\nAnálisis de palabras más utilizadas:")
+    print(df_words)
