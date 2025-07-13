@@ -1,0 +1,49 @@
+import pandas as pd
+import nltk
+import re
+from nltk.corpus import stopwords
+import gender_guesser.detector as gender
+
+# Descargar stopwords si no están descargados
+try:
+    stopwords.words('spanish')
+except LookupError:
+    nltk.download('stopwords')
+stopwords_es = set(stopwords.words('spanish'))
+
+# Inicializar detector de género
+detector = gender.Detector()
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV, procesa fechas y horas."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Fecha"] = df["Date"].dt.date
+    df["Hora"] = df["Date"].dt.time
+    df = df.drop(columns=["Date"])
+    return df
+
+def extraer_primer_nombre(nombre):
+    """Extrae el primer nombre de una cadena."""
+    if pd.isna(nombre):
+        return None
+    return nombre.split()[0]
+
+def asignar_sexo(nombre, detector):
+    """Asigna un sexo basado en el primer nombre."""
+    if pd.notnull(nombre):
+        gender_str = detector.get_gender(nombre)
+        mapa_sexo = {
+            "male": "Hombre",
+            "female": "Mujer",
+            "mostly_male": "Hombre",
+            "mostly_female": "Mujer",
+            "unknown": "Desconocido",
+            "andy": "Ambiguo"
+        }
+        return mapa_sexo.get(gender_str, "Desconocido")
+    return "Desconocido"
+
+if __name__ == "__main__":
+    df_base = cargar_y_limpiar_datos()
+    print("Datos cargados y limpieza básica realizada.")
