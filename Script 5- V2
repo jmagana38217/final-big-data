@@ -1,0 +1,72 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import gender_guesser.detector as gender
+
+# Inicializar el detector de género
+detector_genero = gender.Detector()
+
+# Configuración visual de los gráficos
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(ruta_archivo="mundial_tweets.csv"):
+    """Carga el CSV, procesa fechas, horas y extrae el primer nombre."""
+    try:
+        df = pd.read_csv(ruta_archivo)
+        df["FechaHora"] = pd.to_datetime(df["Date"], errors="coerce")
+        df["Fecha"] = df["FechaHora"].dt.date
+        df["Hora"] = df["FechaHora"].dt.time
+        df = df.drop(columns=["Date"])
+        df["Primer_Nombre"] = df["Name"].apply(lambda nombre: nombre.split()[0] if pd.notna(nombre) else None)
+        return df
+    except FileNotFoundError:
+        print(f"⚠️ Error: No se encontró el archivo '{ruta_archivo}'.")
+    except Exception as e:
+        print(f"⚠️ Error al cargar o procesar los datos: {e}")
+    return pd.DataFrame()  # Retorna un DataFrame vacío si ocurre error
+
+def asignar_genero(nombre, detector):
+    """Asigna un género basado en el primer nombre."""
+    try:
+        if pd.notnull(nombre):
+            genero_detectado = detector.get_gender(nombre)
+            mapa_genero = {
+                "male": "Hombre",
+                "mostly_male": "Hombre",
+                "female": "Mujer",
+                "mostly_female": "Mujer",
+                "unknown": "Desconocido",
+                "andy": "Ambiguo"
+            }
+            return mapa_genero.get(genero_detectado, "Desconocido")
+    except Exception as e:
+        print(f"⚠️ Error al asignar género a '{nombre}': {e}")
+    return "Desconocido"
+
+if __name__ == "__main__":
+    datos = cargar_y_limpiar_datos()
+
+    if not datos.empty:
+        # Asignar género a cada nombre
+        datos["Genero"] = datos["Primer_Nombre"].apply(lambda nombre: asignar_genero(nombre, detector_genero))
+
+        # Conteo por género
+        conteo_genero = datos["Genero"].value_counts()
+        total = conteo_genero.sum()
+        etiquetas = [f"{genero} ({cantidad}, {cantidad/total:.1%})" for genero, cantidad in conteo_genero.items()]
+
+        # Visualización
+        plt.close()
+        conteo_genero.plot(kind="pie", autopct='%1.1f%%', startangle=90, labels=etiquetas)
+        plt.title("¿Qué género publica más?")
+        plt.ylabel("")
+        plt.tight_layout()
+        plt.show()
+
+        # Mostrar resultados en consola
+        print("\n📊 Análisis de género de los usuarios:")
+        print(conteo_genero)
+        print("\n⚠️ Advertencia: Este análisis se basa únicamente en el primer nombre y puede contener errores, especialmente con apodos, nombres no comunes o ambiguos.")
+    else:
+        print("No se puede realizar el análisis por falta de datos.")
