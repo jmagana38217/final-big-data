@@ -1,0 +1,43 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import Counter
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV y procesa fechas y horas."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Fecha"] = df["Date"].dt.date
+    df["Hora"] = df["Date"].dt.time
+    df = df.drop(columns=["Date"])
+    return df
+
+if __name__ == "__main__":
+    df = cargar_y_limpiar_datos()
+
+    # Análisis de hashtags más utilizados
+    hashtags = df['Hashtags'].dropna().astype(str).str.lower().str.split(', ')
+    hashtags_flat = [ht for sublist in hashtags for ht in sublist if ht]
+    hashtag_freq = Counter(hashtags_flat).most_common(20)
+
+    df_hash = pd.DataFrame(hashtag_freq, columns=["Hashtag", "Frecuencia"])
+    df_hash['Porcentaje'] = df_hash['Frecuencia'] / df_hash['Frecuencia'].sum() * 100
+
+    # Visualización
+    plt.close()
+    df_hash.plot(kind="barh", x="Hashtag", y="Frecuencia", legend=False, color="orchid")
+    for i, (freq, pct) in enumerate(zip(df_hash['Frecuencia'], df_hash['Porcentaje'])):
+        plt.text(freq + 1, i, f'{freq} ({pct:.1f}%)', va='center')
+    plt.title("Hashtags más utilizados")
+    plt.xlabel("Frecuencia")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    plt.show()
+
+    # Mostrar resultados en consola
+    print("\nAnálisis de hashtags más utilizados:")
+    print(df_hash)
