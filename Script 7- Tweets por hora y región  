@@ -1,0 +1,51 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib
+import re
+
+# Deshabilitar el uso de TeX
+matplotlib.rcParams['text.usetex'] = False
+matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV, procesa fechas y horas."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Fecha"] = df["Date"].dt.date
+    df["Hora"] = pd.to_datetime(df["Date"], errors="coerce").dt.time
+    df = df.drop(columns=["Date"])
+    return df
+
+def limpiar_texto(texto):
+    """Limpia el texto eliminando caracteres especiales."""
+    if isinstance(texto, str):
+        # Eliminar caracteres que no son alfanuméricos, espacios o guiones bajos
+        return re.sub(r'[^a-zA-Z0-9\s_]', '', texto)
+    return texto
+
+if __name__ == "__main__":
+    df = cargar_y_limpiar_datos()
+
+    # Extraer la hora como entero
+    df['Hora_int'] = df['Hora'].apply(lambda x: x.hour if pd.notna(x) else None)
+
+    # Llenar valores NaN en 'Place' y luego limpiar los nombres de los lugares
+    df['Place'] = df['Place'].fillna("Sin región").apply(limpiar_texto)
+
+    # Agrupar por lugar y hora, luego contar
+    tweets_por_hora_region = df.groupby(['Place', 'Hora_int']).size().unstack().fillna(0)
+
+    # Transponer para que las horas estén en el eje x y los lugares sean las líneas
+    plt.figure()
+    tweets_por_hora_region.T.plot(kind='line', marker='o')
+    plt.title("Tweets por hora y región")
+    plt.xlabel("Hora del día")
+    plt.ylabel("Cantidad de tweets")
+    plt.xticks(range(24)) # Asegurarse de que todas las horas estén en el eje x
+    plt.tight_layout()
+    plt.show()

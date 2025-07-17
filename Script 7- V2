@@ -1,0 +1,64 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import matplotlib
+import re
+
+# Deshabilitar el uso de TeX (prevención de errores con matplotlib)
+matplotlib.rcParams['text.usetex'] = False
+matplotlib.rcParams['text.latex.preamble'] = r'\usepackage{amsmath}'
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(ruta_archivo="mundial_tweets.csv"):
+    """Carga el archivo CSV, procesa fechas y horas."""
+    try:
+        datos = pd.read_csv(ruta_archivo)
+        datos["Fecha_Completa"] = pd.to_datetime(datos["Date"], errors="coerce")
+        datos["Fecha"] = datos["Fecha_Completa"].dt.date
+        datos["Hora"] = datos["Fecha_Completa"].dt.time
+        datos.drop(columns=["Date"], inplace=True)
+        return datos
+    except FileNotFoundError:
+        print(f"❌ Error: No se encontró el archivo '{ruta_archivo}'")
+    except Exception as e:
+        print(f"❌ Error al cargar y limpiar datos: {e}")
+    return pd.DataFrame()  # Retorna DataFrame vacío si hay error
+
+def limpiar_texto(texto):
+    """Limpia texto eliminando caracteres especiales."""
+    if isinstance(texto, str):
+        return re.sub(r'[^a-zA-Z0-9\s_]', '', texto)
+    return texto
+
+if __name__ == "__main__":
+    # Cargar y limpiar datos
+    df = cargar_y_limpiar_datos()
+
+    if not df.empty:
+        try:
+            # Convertir hora a número entero (hora del día)
+            df['Hora_Entera'] = df['Hora'].apply(lambda x: x.hour if pd.notna(x) else None)
+
+            # Rellenar valores nulos en 'Place' y limpiar texto
+            df['Region'] = df['Place'].fillna("Sin región").apply(limpiar_texto)
+
+            # Agrupar por región y hora
+            resumen = df.groupby(['Region', 'Hora_Entera']).size().unstack().fillna(0)
+
+            # Graficar
+            plt.figure()
+            resumen.T.plot(kind='line', marker='o')
+            plt.title("Tweets por hora y región")
+            plt.xlabel("Hora del día")
+            plt.ylabel("Cantidad de tweets")
+            plt.xticks(range(24))
+            plt.tight_layout()
+            plt.show()
+
+        except Exception as e:
+            print(f"❌ Error en el análisis o visualización: {e}")
+    else:
+        print("⚠️ No se pudo procesar el análisis porque el DataFrame está vacío.")
