@@ -1,0 +1,51 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (6, 4)})
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV."""
+    df = pd.read_csv(file_path)
+    return df
+
+if __name__ == "__main__":
+    df = cargar_y_limpiar_datos()
+
+    # Análisis de posible spam
+    df['Es_spam'] = (df['Followers'] < 20) & (df['Friends'] < 20)
+    spam_counts = df['Es_spam'].value_counts()
+    total_usuarios = len(df)
+
+    # Crear DataFrame para la tabla con formato de porcentaje
+    df_spam = pd.DataFrame({
+        'Categoría': ['No Spam', 'Potencial Spam'],
+        'Cantidad': [spam_counts.get(False, 0), spam_counts.get(True, 0)],
+        'Porcentaje': [f"{spam_counts.get(False, 0) / total_usuarios * 100:.1f}%",
+                       f"{spam_counts.get(True, 0) / total_usuarios * 100:.1f}%"]
+    })
+
+    # Visualización de la tabla
+    fig, ax = plt.subplots(figsize=(8, 5)) # Aumentamos un poco la altura para la leyenda
+    ax.axis('off')  # Ocultar los ejes
+    tabla = ax.table(cellText=df_spam[['Categoría', 'Cantidad', 'Porcentaje']].values,
+                      colLabels=['Categoría', 'Cantidad', 'Porcentaje'],
+                      cellLoc='center',
+                      loc='upper center') # Cambiamos la ubicación de la tabla para dejar espacio a la leyenda
+    tabla.auto_set_font_size(False)
+    tabla.set_fontsize(10)
+    plt.title("Análisis de Usuarios Potencialmente Spam")
+
+    # Añadir leyenda
+    leyenda_texto = "Análisis de potencial spam:\nUsuarios con menos de 20 seguidores Y menos de 20 amigos se consideran potencialmente spam."
+    plt.figtext(0.5, 0.01, leyenda_texto, ha="center", fontsize=9, bbox={"facecolor":"lightgrey", "alpha":0.5, "pad":5})
+
+    plt.tight_layout(rect=[0, 0.1, 1, 0.95]) # Ajustamos el layout para que la leyenda no se superponga
+    plt.show()
+
+    # Mostrar resultados en consola (opcional)
+    print("\nAnálisis de posible spam:")
+    print(df_spam)
+    print("\nDefinición de potencial spam: Usuarios con menos de 20 seguidores Y menos de 20 amigos.")
