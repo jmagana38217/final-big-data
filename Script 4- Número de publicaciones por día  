@@ -1,0 +1,36 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Configuración visual
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_limpiar_datos(file_path="mundial_tweets.csv"):
+    """Carga el CSV y procesa fechas y horas."""
+    df = pd.read_csv(file_path)
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Fecha"] = df["Date"].dt.date
+    df["Hora"] = df["Date"].dt.time
+    df = df.drop(columns=["Date"])
+    return df
+
+if __name__ == "__main__":
+    df = cargar_y_limpiar_datos()
+
+    # Análisis de publicaciones por día
+    tweets_por_dia = df.groupby("Fecha").size()
+
+    # Visualización
+    plt.close()
+    tweets_por_dia.plot(kind="line", marker="o")
+    plt.title("Publicaciones por día")
+    plt.xlabel("Fecha")
+    plt.ylabel("Cantidad de tweets")
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+    # Mostrar resultados en consola
+    print("\nAnálisis de publicaciones por día:")
+    print(tweets_por_dia.head()) # Mostrar los primeros resultados

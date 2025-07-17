@@ -1,0 +1,54 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Configuración visual para los gráficos
+plt.style.use('seaborn-v0_8-darkgrid')
+sns.set(rc={'figure.figsize': (12, 6)})
+
+def cargar_y_procesar_datos(ruta_archivo="mundial_tweets.csv"):
+    """
+    Carga un archivo CSV y extrae la fecha y la hora de cada tweet.
+    Retorna un DataFrame con columnas: Fecha, Hora.
+    """
+    try:
+        datos = pd.read_csv(ruta_archivo)
+        datos["FechaCompleta"] = pd.to_datetime(datos["Date"], errors="coerce")
+        datos["Fecha"] = datos["FechaCompleta"].dt.date
+        datos["Hora"] = datos["FechaCompleta"].dt.time
+        datos = datos.drop(columns=["Date", "FechaCompleta"])
+        return datos
+    except FileNotFoundError:
+        print(f"Error: No se encontró el archivo '{ruta_archivo}'.")
+        return None
+    except Exception as error:
+        print(f"Ocurrió un error al procesar el archivo: {error}")
+        return None
+
+def graficar_tweets_por_dia(dataframe):
+    """
+    Genera una gráfica de línea con la cantidad de tweets por día.
+    """
+    try:
+        tweets_por_dia = dataframe.groupby("Fecha").size()
+
+        plt.figure()
+        tweets_por_dia.plot(kind="line", marker="o")
+        plt.title("Publicaciones por día")
+        plt.xlabel("Fecha")
+        plt.ylabel("Cantidad de tweets")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.show()
+
+        print("\nAnálisis de publicaciones por día:")
+        print(tweets_por_dia.head())
+
+    except Exception as error:
+        print(f"Ocurrió un error al generar la gráfica: {error}")
+
+if __name__ == "__main__":
+    datos_tweets = cargar_y_procesar_datos()
+
+    if datos_tweets is not None:
+        graficar_tweets_por_dia(datos_tweets)
